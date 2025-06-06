@@ -1,19 +1,19 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { Loader2 } from 'lucide-react';
 import { useTransition, animated } from '@react-spring/web';
-import { withMinimumDelay } from '../utils/withDelay';
-import { modalTransitions, backdropTransitions } from '../utils/transitions';
-import { useToast } from '../contexts/ToastContext';
-import { BudgetItemForm } from './BudgetItemForm';
-import BudgetDetailsHeader from './BudgetDetailsHeader';
-import BudgetItemRow from './BudgetItemRow';
-import BudgetTableHeader from './BudgetTableHeader';
-import DeleteConfirmationModal from './DeleteConfirmationModal';
-import { compressImage, formatFileSize } from '../utils/imageCompression';
-import { ImageViewer } from './ImageViewer';
-import { getStorageEstimate, formatStorageMessage } from '../utils/storageEstimation';
-import { disableScroll, enableScroll } from '../utils/scrollLock';
+import { withMinimumDelay } from '../../utils/withDelay';
+import { modalTransitions, backdropTransitions } from '../../utils/transitions';
+import { useToast } from '../../contexts/ToastContext';
+import { BudgetItemForm } from '../BudgetItemForm';
+import BudgetDetailsHeader from '../BudgetDetailsHeader';
+import BudgetItemRow from '../BudgetItemRow';
+import BudgetTableHeader from '../BudgetTableHeader';
+import DeleteConfirmationModal from '../DeleteConfirmationModal';
+import { compressImage, formatFileSize } from '../../utils/imageCompression';
+import { ImageViewer } from '../ImageViewer';
+import { getStorageEstimate, formatStorageMessage } from '../../utils/storageEstimation';
+import { disableScroll, enableScroll } from '../../utils/scrollLock';
 
 const PrintableContent = React.forwardRef(({budget}, ref) => {
     return (
@@ -23,7 +23,6 @@ const PrintableContent = React.forwardRef(({budget}, ref) => {
                 <div className="mb-4">
                     <p>Date: {new Date(budget.date).toLocaleDateString()}</p>
                     <p>Budget Limit: ${budget.amount.toLocaleString()}</p>
-                    {budget.client && <p>Client: {budget.client}</p>}
                     <p>Created: {new Date(budget.createdAt).toLocaleDateString()}</p>
                 </div>
                 <table className="min-w-full divide-y divide-gray-200">
@@ -53,40 +52,33 @@ const PrintableContent = React.forwardRef(({budget}, ref) => {
 
 PrintableContent.displayName = 'PrintableContent';
 
-export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
+export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
     const [showForm, setShowForm] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [isClosing, setIsClosing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isAddingItem, setIsAddingItem] = useState(false);
+    const componentRef = useRef(null);
+    const [isPrinting, setIsPrinting] = useState(false);
+    const [isSharing, setIsSharing] = useState(false);
     const [show, setShow] = useState(true);
+    const { showToast } = useToast();
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [selectedImageType, setSelectedImageType] = useState(null);
+
     const [showDeleteItemModal, setShowDeleteItemModal] = useState(false);
     const [deletingItemId, setDeletingItemId] = useState(null);
     const [deletingButtonId, setDeletingButtonId] = useState(null);
     const [editingItemId, setEditingItemId] = useState(null);
     const [uploadingImageItemId, setUploadingImageItemId] = useState(null);
-    const componentRef = useRef(null);
-    const [isPrinting, setIsPrinting] = useState(false);
-    const [isSharing, setIsSharing] = useState(false);
-    const { showToast } = useToast();
-    const [selectedImage, setSelectedImage] = useState(null);
-    const [selectedImageType, setSelectedImageType] = useState(null);
 
     const transitions = useTransition(show, modalTransitions);
     const backdropTransition = useTransition(show, backdropTransitions);
     const fileInputRef = useRef(null);
 
-    useEffect(() => {
-        disableScroll();
-        return () => {
-            enableScroll();
-        };
-    }, []);
-
-    // Handle printing
     const handlePrint = useReactToPrint({
         contentRef: componentRef,
-        documentTitle: `${budget.name} - Business Expense Project`,
+        documentTitle: `${budget.name} - Custom Budget Details`,
         onBeforePrint: async () => {
             setIsPrinting(true);
             await withMinimumDelay(async () => {}, 2000);
@@ -94,16 +86,36 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
         onAfterPrint: async () => {
             await new Promise((resolve) => {
                 setIsPrinting(false);
-                showToast('success', 'Project printed successfully');
+                showToast('success', 'Budget printed successfully');
                 resolve();
             });
         },
         onPrintError: (error) => {
             console.error('Print error:', error);
-            showToast('error', 'Failed to print project. Please try again.');
+            showToast('error', 'Failed to print budget. Please try again.');
             setIsPrinting(false);
         }
     });
+
+    const { totalSpent, remainingAmount } = useMemo(() => {
+        // Only count active items in total spent
+        const total = budget.items?.reduce((sum, item) =>
+            sum + (item.isActive ? (item.amount || 0) : 0), 0) || 0;
+        const remaining = budget.amount - total;
+
+        return {
+            totalSpent: total,
+            remainingAmount: remaining
+        };
+    }, [budget.items, budget.amount]);
+
+    useEffect(() => {
+        disableScroll();
+
+        return () => {
+            enableScroll();
+        };
+    }, []);
 
     const handlePrintClick = (e) => {
         e.preventDefault();
@@ -112,43 +124,24 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
         }
     };
 
-    // Handle sharing
     const handleShare = async () => {
         setIsSharing(true);
         try {
             await withMinimumDelay(async () => {}, 2000);
             const shareData = {
                 title: budget.name,
-                text: `Business Expense Project: ${budget.name}\nBudget: $${budget.amount}\nClient: ${budget.client || 'None'}\nDate: ${new Date(budget.date).toLocaleDateString()}`,
+                text: `Custom Budget: ${budget.name}\nAmount: $${budget.amount}\nDate: ${new Date(budget.date).toLocaleDateString()}`,
                 url: window.location.href,
             };
             await navigator.share(shareData);
-            showToast('success', 'Project shared successfully');
+            showToast('success', 'Budget shared successfully');
         } catch (error) {
             console.error('Error sharing:', error);
             if (error.name === 'AbortError') return;
-            showToast('error', 'Failed to share project. Please try again.');
+            showToast('error', 'Failed to share budget. Please try again.');
         } finally {
             setIsSharing(false);
         }
-    };
-
-    const totalSpent = budget.items?.reduce((sum, item) =>
-        sum + (item.isActive ? (item.amount || 0) : 0), 0) || 0;
-
-    // Check if there's a meaningful budget limit
-    const hasBudgetLimit = budget.amount > 0;
-
-    // Only calculate remaining if there's a budget limit
-    const remainingAmount = hasBudgetLimit ? budget.amount - totalSpent : null;
-
-    const handleClose = async () => {
-        setIsClosing(true);
-        await withMinimumDelay(async () => {});
-        setShow(false);
-        await withMinimumDelay(async () => {});
-        setIsClosing(false);
-        onClose();
     };
 
     const handleAddItemClick = async () => {
@@ -167,17 +160,13 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
         setEditingItem(null);
     };
 
-    const handleEditItem = async (item) => {
-        setEditingItemId(item.id);
-        try {
-            await withMinimumDelay(async () => {}, 800);
-            setEditingItemId(null);
-            setEditingItem(item);
-            setShowForm(true);
-        } catch (error) {
-            setEditingItemId(null);
-            console.error('Error initiating edit:', error);
-        }
+    const handleClose = async () => {
+        setIsClosing(true);
+        await withMinimumDelay(async () => {});
+        setShow(false);
+        await withMinimumDelay(async () => {});
+        setIsClosing(false);
+        onClose();
     };
 
     const handleSaveItem = async (itemData) => {
@@ -212,8 +201,8 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
 
             await onUpdate(updatedBudget);
             showToast('success', editingItem
-                ? 'Business expense updated successfully'
-                : 'New business expense added successfully'
+                ? 'Expense item updated successfully'
+                : 'New expense item added successfully'
             );
             return true;
         } catch (error) {
@@ -221,6 +210,19 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
             showToast('error', `Failed to ${editingItem ? 'update' : 'add'} expense item. Please try again.`);
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleEditItem = async (item) => {
+        setEditingItemId(item.id);
+        try {
+            await withMinimumDelay(async () => {}, 800);
+            setEditingItemId(null);
+            setEditingItem(item);
+            setShowForm(true);
+        } catch (error) {
+            setEditingItemId(null);
+            console.error('Error initiating edit:', error);
         }
     };
 
@@ -324,11 +326,6 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
         }
     };
 
-    const handleImageClick = (item) => {
-        setSelectedImage(item.image);
-        setSelectedImageType(item.fileType || 'image/png');
-    };
-
     const handleFileInputChange = async (e) => {
         const file = e.target.files?.[0];
         const itemId = e.target.dataset.itemId;
@@ -339,7 +336,7 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
         }
 
         try {
-            // Same compression and storage logic as before
+            // Compress the image
             const compressResult = await compressImage(file);
 
             // Get storage estimate
@@ -370,8 +367,6 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
         } catch (compressionError) {
             console.error('Error compressing image:', compressionError);
             showToast('error', 'Could not compress image. Using original instead.');
-
-
         } finally {
             // Reset the file input value so the same file can be selected again
             if (fileInputRef.current) {
@@ -402,8 +397,8 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
                                     budget={budget}
                                     totalSpent={totalSpent}
                                     remainingAmount={remainingAmount}
-                                    hasBudgetLimit={hasBudgetLimit}
-                                    budgetType="business"
+                                    hasBudgetLimit={true}
+                                    budgetType="custom"
                                     onPrint={handlePrintClick}
                                     onShare={handleShare}
                                     onClose={handleClose}
@@ -440,7 +435,10 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
                                                         onImageUpload={handleImageUpload}
                                                         onRemoveImage={handleRemoveImage}
                                                         onToggleActive={handleToggleActive}
-                                                        onImageClick={handleImageClick}
+                                                        onImageClick={(item) => {
+                                                            setSelectedImage(item.image);
+                                                            setSelectedImageType(item.fileType || 'image/png');
+                                                        }}
                                                         editingItemId={editingItemId}
                                                         deletingButtonId={deletingButtonId}
                                                         uploadingImageItemId={uploadingImageItemId}
@@ -457,12 +455,12 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
                                         <button
                                             onClick={handleClose}
                                             disabled={isClosing || isSaving}
-                                            className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {isClosing ? (
                                                 <Loader2 className="h-4 w-4 mr-2 animate-spin"/>
                                             ) : null}
-                                            Close Project
+                                            Close Budget
                                         </button>
                                     </div>
                                 </div>
@@ -492,9 +490,11 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
                     onClose={handleFormClose}
                     initialItem={editingItem}
                     isSaving={isSaving}
-                    budgetType="business"
+                    budgetType="custom"
+                    budgetCategory={budget.budgetCategory} // Pass the budgetCategory
                 />
             )}
+
             <DeleteConfirmationModal
                 isOpen={showDeleteItemModal && !!deletingItemId}
                 onClose={handleCancelItemDelete}
@@ -502,6 +502,7 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
                 title="Delete Expense Item"
                 message="Are you sure you want to delete this expense item? This action cannot be undone."
             />
+
             {selectedImage && (
                 <ImageViewer
                     imageData={selectedImage}
@@ -512,6 +513,7 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
                     }}
                 />
             )}
+
             <input
                 type="file"
                 ref={fileInputRef}
@@ -523,4 +525,4 @@ export const BusinessProjectDetails = ({ budget, onClose, onUpdate }) => {
     );
 };
 
-export default BusinessProjectDetails;
+export default CustomBudgetDetails;

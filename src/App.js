@@ -6,13 +6,13 @@ import AppRegistration from './components/AppRegistration';
 import { Home } from "./components/Home";  // Add this import
 import authService from './services/authService';
 import { indexdbService } from './services/IndexDBService';
-import { PaycheckBudgets } from "./components/PaycheckBudgets";
+import { PaycheckBudgets } from "./components/paycheck/PaycheckBudgets";
 import { Toaster } from 'react-hot-toast';  // Add this import
 import { ToastProvider } from './contexts/ToastContext';  // Add this import
 import { QRCodeSVG } from 'qrcode.react';
 import {isMobileDevice, shouldBypassMobileCheck} from "./utils/helpers";
-import { BusinessProjects } from './components/BusinessProjects';
-import { CustomBudgets } from "./components/CustomBudgets";
+import { BusinessProjects } from './components/business/BusinessProjects';
+import { CustomBudgets } from "./components/custom/CustomBudgets";
 
 class ErrorBoundary extends React.Component {
     constructor(props) {

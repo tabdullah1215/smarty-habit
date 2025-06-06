@@ -1,8 +1,8 @@
 // CategorySelect.js
 import React, { useState } from 'react';
 import { Loader2, PlusCircle } from 'lucide-react';
-import { withMinimumDelay } from '../utils/withDelay';
-import AddCategoryModal from './AddCategoryModal';
+import { withMinimumDelay } from '../../utils/withDelay';
+import AddCategoryModal from '../AddCategoryModal';
 
 export const CategorySelect = ({
                                    value,

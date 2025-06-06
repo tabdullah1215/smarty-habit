@@ -1,19 +1,19 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
-import { useReactToPrint } from 'react-to-print';
-import { Loader2 } from 'lucide-react';
-import { useTransition, animated } from '@react-spring/web';
-import { withMinimumDelay } from '../utils/withDelay';
-import { modalTransitions, backdropTransitions } from '../utils/transitions';
-import { useToast } from '../contexts/ToastContext';
-import { BudgetItemForm } from './BudgetItemForm';
-import BudgetDetailsHeader from './BudgetDetailsHeader';
-import BudgetItemRow from './BudgetItemRow';
-import BudgetTableHeader from './BudgetTableHeader';
-import DeleteConfirmationModal from './DeleteConfirmationModal';
-import { compressImage, formatFileSize } from '../utils/imageCompression';
-import { ImageViewer } from './ImageViewer';
-import { getStorageEstimate, formatStorageMessage } from '../utils/storageEstimation';
-import { disableScroll, enableScroll } from '../utils/scrollLock';
+import React, {useRef, useState, useMemo, useEffect} from 'react';
+import {useReactToPrint} from 'react-to-print';
+import {Loader2} from 'lucide-react';
+import {useTransition, animated} from '@react-spring/web';
+import {withMinimumDelay} from '../../utils/withDelay';
+import {BudgetItemForm} from '../BudgetItemForm';
+import {modalTransitions, backdropTransitions} from '../../utils/transitions';
+import {useToast} from '../../contexts/ToastContext';
+import {ImageViewer} from '../ImageViewer';
+import {disableScroll, enableScroll} from '../../utils/scrollLock';
+import BudgetDetailsHeader from "../BudgetDetailsHeader";
+import BudgetItemRow from "../BudgetItemRow";
+import BudgetTableHeader from "../BudgetTableHeader";
+import DeleteConfirmationModal from "../DeleteConfirmationModal";
+import { compressImage, formatFileSize } from '../../utils/imageCompression';
+import { getStorageEstimate, formatStorageMessage } from '../../utils/storageEstimation';
 
 const PrintableContent = React.forwardRef(({budget}, ref) => {
     return (
@@ -22,7 +22,7 @@ const PrintableContent = React.forwardRef(({budget}, ref) => {
                 <h2 className="text-2xl font-bold mb-4">{budget.name}</h2>
                 <div className="mb-4">
                     <p>Date: {new Date(budget.date).toLocaleDateString()}</p>
-                    <p>Budget Limit: ${budget.amount.toLocaleString()}</p>
+                    <p>Net Amount: ${budget.amount.toLocaleString()}</p>
                     <p>Created: {new Date(budget.createdAt).toLocaleDateString()}</p>
                 </div>
                 <table className="min-w-full divide-y divide-gray-200">
@@ -52,7 +52,7 @@ const PrintableContent = React.forwardRef(({budget}, ref) => {
 
 PrintableContent.displayName = 'PrintableContent';
 
-export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
+export const PaycheckBudgetDetails = ({budget, onClose, onUpdate}) => {
     const [showForm, setShowForm] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [isClosing, setIsClosing] = useState(false);
@@ -62,7 +62,7 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
     const [isPrinting, setIsPrinting] = useState(false);
     const [isSharing, setIsSharing] = useState(false);
     const [show, setShow] = useState(true);
-    const { showToast } = useToast();
+    const {showToast} = useToast();
     const [selectedImage, setSelectedImage] = useState(null);
     const [selectedImageType, setSelectedImageType] = useState(null);
 
@@ -78,7 +78,7 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
 
     const handlePrint = useReactToPrint({
         contentRef: componentRef,
-        documentTitle: `${budget.name} - Custom Budget Details`,
+        documentTitle: `${budget.name} - Paycheck Budget Details`,
         onBeforePrint: async () => {
             setIsPrinting(true);
             await withMinimumDelay(async () => {}, 2000);
@@ -97,25 +97,119 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
         }
     });
 
-    const { totalSpent, remainingAmount } = useMemo(() => {
+    const {totalSpent, remainingAmount, categoryTotals, monthlyBreakdown} = useMemo(() => {
         // Only count active items in total spent
         const total = budget.items?.reduce((sum, item) =>
             sum + (item.isActive ? (item.amount || 0) : 0), 0) || 0;
         const remaining = budget.amount - total;
 
+        const byCategory = budget.items?.reduce((acc, item) => {
+            // Only include active items in category totals
+            if (item.isActive) {
+                acc[item.category] = (acc[item.category] || 0) + (item.amount || 0);
+            }
+            return acc;
+        }, {});
+
+        const byMonth = budget.items?.reduce((acc, item) => {
+            const date = new Date(item.date);
+            const monthYear = date.toLocaleString('default', {
+                month: 'long',
+                year: 'numeric'
+            });
+
+            if (!acc[monthYear]) {
+                acc[monthYear] = {
+                    total: 0,
+                    items: [],
+                    month: date.getMonth(),
+                    year: date.getFullYear()
+                };
+            }
+
+            if (item.isActive) {
+                acc[monthYear].total += (item.amount || 0);
+            }
+            acc[monthYear].items.push(item);
+
+            return acc;
+        }, {});
+
+        const sortedByMonth = Object.entries(byMonth || {})
+            .sort(([, a], [, b]) => {
+                if (a.year !== b.year) return b.year - a.year;
+                return b.month - a.month;
+            })
+            .reduce((acc, [key, value]) => {
+                acc[key] = value;
+                return acc;
+            }, {});
+
         return {
             totalSpent: total,
-            remainingAmount: remaining
+            remainingAmount: remaining,
+            categoryTotals: byCategory || {},
+            monthlyBreakdown: sortedByMonth || {}
         };
     }, [budget.items, budget.amount]);
 
-    useEffect(() => {
-        disableScroll();
+    const budgetStats = useMemo(() => {
+        const percentageUsed = (totalSpent / budget.amount) * 100;
+        const isOverBudget = percentageUsed > 100;
+        const percentageRemaining = 100 - percentageUsed;
 
-        return () => {
-            enableScroll();
+        return {
+            percentageUsed: Math.min(percentageUsed, 100),
+            isOverBudget,
+            percentageRemaining: Math.max(percentageRemaining, 0),
+            status: isOverBudget ? 'over' : percentageUsed > 90 ? 'warning' : 'good'
         };
-    }, []);
+    }, [totalSpent, budget.amount]);
+
+    const handleSaveItem = async (itemData) => {
+        setIsSaving(true);
+        try {
+            const updatedItems = editingItem
+                ? budget.items.map(item =>
+                    item.id === editingItem.id
+                        ? {
+                            ...item,
+                            ...itemData,
+                            updatedAt: new Date().toISOString()
+                        }
+                        : item
+                )
+                : [
+                    ...budget.items,
+                    {
+                        id: crypto.randomUUID(),
+                        ...itemData,
+                        isActive: true,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    }
+                ];
+
+            const updatedBudget = {
+                ...budget,
+                items: updatedItems,
+                updatedAt: new Date().toISOString()
+            };
+
+            await onUpdate(updatedBudget);
+            showToast('success', editingItem
+                ? 'Expense item updated successfully'
+                : 'New expense item added successfully'
+            );
+            return true;
+
+        } catch (error) {
+            console.error('Error saving item:', error);
+            showToast('error', `Failed to ${editingItem ? 'update' : 'add'} expense item. Please try again.`);
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const handlePrintClick = (e) => {
         e.preventDefault();
@@ -130,7 +224,7 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
             await withMinimumDelay(async () => {}, 2000);
             const shareData = {
                 title: budget.name,
-                text: `Custom Budget: ${budget.name}\nAmount: $${budget.amount}\nDate: ${new Date(budget.date).toLocaleDateString()}`,
+                text: `Paycheck Budget: ${budget.name}\nAmount: $${budget.amount}\nDate: ${new Date(budget.date).toLocaleDateString()}`,
                 url: window.location.href,
             };
             await navigator.share(shareData);
@@ -169,55 +263,11 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
         onClose();
     };
 
-    const handleSaveItem = async (itemData) => {
-        setIsSaving(true);
-        try {
-            const updatedItems = editingItem
-                ? budget.items.map(item =>
-                    item.id === editingItem.id
-                        ? {
-                            ...item,
-                            ...itemData,
-                            updatedAt: new Date().toISOString()
-                        }
-                        : item
-                )
-                : [
-                    ...budget.items,
-                    {
-                        id: crypto.randomUUID(),
-                        ...itemData,
-                        isActive: true,
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    }
-                ];
-
-            const updatedBudget = {
-                ...budget,
-                items: updatedItems,
-                updatedAt: new Date().toISOString()
-            };
-
-            await onUpdate(updatedBudget);
-            showToast('success', editingItem
-                ? 'Expense item updated successfully'
-                : 'New expense item added successfully'
-            );
-            return true;
-        } catch (error) {
-            console.error('Error saving item:', error);
-            showToast('error', `Failed to ${editingItem ? 'update' : 'add'} expense item. Please try again.`);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
     const handleEditItem = async (item) => {
-        setEditingItemId(item.id);
+        setEditingItemId(item.id);  // Set loading state for specific button
         try {
             await withMinimumDelay(async () => {}, 800);
-            setEditingItemId(null);
+            setEditingItemId(null);  // Clear loading state before showing form
             setEditingItem(item);
             setShowForm(true);
         } catch (error) {
@@ -226,24 +276,10 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
         }
     };
 
-    const handleDeleteItem = async (itemId) => {
-        setDeletingButtonId(itemId);
-        try {
-            await withMinimumDelay(async () => {});
-            setDeletingButtonId(null);
-            setDeletingItemId(itemId);
-            setShowDeleteItemModal(true);
-        } catch (error) {
-            setDeletingButtonId(null);
-            console.error('Error initiating delete:', error);
-        }
-    };
-
     const handleCancelItemDelete = () => {
         setShowDeleteItemModal(false);
         setDeletingItemId(null);
     };
-
     const confirmItemDelete = async () => {
         try {
             const updatedBudget = {
@@ -259,7 +295,64 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
             showToast('error', 'Failed to delete expense item. Please try again.');
         }
     };
+    const handleDeleteItem = async (itemId) => {
+        setDeletingButtonId(itemId);
+        try {
+            await withMinimumDelay(async () => {
+            });
+            setDeletingButtonId(null);
+            setDeletingItemId(itemId);
+            setShowDeleteItemModal(true);
+        } catch (error) {
+            setDeletingButtonId(null);
+            console.error('Error initiating delete:', error);
+        }
+    }
 
+    const handleImageUpload = async (itemId) => {
+        setUploadingImageItemId(itemId);
+        try {
+            await withMinimumDelay(async () => {
+                // Instead of creating a new input, use the ref
+                if (fileInputRef.current) {
+                    // Store the current itemId in a data attribute
+                    fileInputRef.current.dataset.itemId = itemId;
+                    fileInputRef.current.click();
+                }
+            }, 800);
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            showToast('error', 'Failed to upload image: ' + (error.message || 'Unknown error'));
+        } finally {
+            // Don't clear uploadingImageItemId here - it will be done in handleFileInputChange
+        }
+    };
+
+    useEffect(() => {
+        disableScroll();
+
+        return () => {
+            enableScroll();
+        };
+    }, []);
+
+    const handleRemoveImage = async (itemId) => {
+        setUploadingImageItemId(itemId);
+        try {
+            await withMinimumDelay(async () => {
+                const updatedItems = budget.items.map(item =>
+                    item.id === itemId ? {...item, image: null, fileType: null} : item
+                );
+                const updatedBudget = {...budget, items: updatedItems};
+                await onUpdate(updatedBudget);
+                showToast('success', 'Attachment removed successfully');
+            });
+        } catch (error) {
+            showToast('error', 'Failed to remove attachment');
+        } finally {
+            setUploadingImageItemId(null);
+        }
+    };
     const handleToggleActive = async (itemId) => {
         try {
             const updatedItems = budget.items.map(item =>
@@ -291,41 +384,6 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
         );
     };
 
-    const handleImageUpload = async (itemId) => {
-        setUploadingImageItemId(itemId);
-        try {
-            await withMinimumDelay(async () => {
-                if (fileInputRef.current) {
-                    fileInputRef.current.dataset.itemId = itemId;
-                    fileInputRef.current.click();
-                }
-            }, 800);
-        } catch (error) {
-            console.error('Error uploading image:', error);
-            showToast('error', 'Failed to upload image: ' + (error.message || 'Unknown error'));
-        } finally {
-            // Don't clear uploadingImageItemId here - it will be done in handleFileInputChange
-        }
-    };
-
-    const handleRemoveImage = async (itemId) => {
-        setUploadingImageItemId(itemId);
-        try {
-            await withMinimumDelay(async () => {
-                const updatedItems = budget.items.map(item =>
-                    item.id === itemId ? {...item, image: null, fileType: null} : item
-                );
-                const updatedBudget = {...budget, items: updatedItems};
-                await onUpdate(updatedBudget);
-                showToast('success', 'Attachment removed successfully');
-            });
-        } catch (error) {
-            showToast('error', 'Failed to remove attachment');
-        } finally {
-            setUploadingImageItemId(null);
-        }
-    };
-
     const handleFileInputChange = async (e) => {
         const file = e.target.files?.[0];
         const itemId = e.target.dataset.itemId;
@@ -336,7 +394,7 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
         }
 
         try {
-            // Compress the image
+            // Same compression and storage logic as before
             const compressResult = await compressImage(file);
 
             // Get storage estimate
@@ -365,8 +423,11 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
             await onUpdate(updatedBudget);
 
         } catch (compressionError) {
+            // Fallback logic for compression errors (same as before)
             console.error('Error compressing image:', compressionError);
             showToast('error', 'Could not compress image. Using original instead.');
+
+            // ...existing fallback code...
         } finally {
             // Reset the file input value so the same file can be selected again
             if (fileInputRef.current) {
@@ -397,8 +458,6 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
                                     budget={budget}
                                     totalSpent={totalSpent}
                                     remainingAmount={remainingAmount}
-                                    hasBudgetLimit={true}
-                                    budgetType="custom"
                                     onPrint={handlePrintClick}
                                     onShare={handleShare}
                                     onClose={handleClose}
@@ -455,7 +514,7 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
                                         <button
                                             onClick={handleClose}
                                             disabled={isClosing || isSaving}
-                                            className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {isClosing ? (
                                                 <Loader2 className="h-4 w-4 mr-2 animate-spin"/>
@@ -464,6 +523,35 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
                                         </button>
                                     </div>
                                 </div>
+                                {showForm && (
+                                    <BudgetItemForm
+                                        onSave={async (itemData) => {
+                                            setIsSaving(true);
+                                            try {
+                                                await withMinimumDelay(async () => {
+                                                    await handleSaveItem(itemData);
+                                                });
+                                            } finally {
+                                                setIsSaving(false);
+                                            }
+                                        }}
+                                        onClose={handleFormClose}
+                                        initialItem={editingItem}
+                                        isSaving={isSaving}
+                                        budgetType="paycheck"
+                                    />
+                                )}
+
+                                {selectedImage && (
+                                    <ImageViewer
+                                        imageData={selectedImage}
+                                        fileType={selectedImageType}
+                                        onClose={() => {
+                                            setSelectedImage(null);
+                                            setSelectedImageType(null);
+                                        }}
+                                    />
+                                )}
 
                                 <div style={{position: 'fixed', top: '-9999px', left: '-9999px'}}>
                                     <PrintableContent
@@ -475,26 +563,6 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
                         </animated.div>
                     )
             )}
-            {showForm && (
-                <BudgetItemForm
-                    onSave={async (itemData) => {
-                        setIsSaving(true);
-                        try {
-                            await withMinimumDelay(async () => {
-                                await handleSaveItem(itemData);
-                            });
-                        } finally {
-                            setIsSaving(false);
-                        }
-                    }}
-                    onClose={handleFormClose}
-                    initialItem={editingItem}
-                    isSaving={isSaving}
-                    budgetType="custom"
-                    budgetCategory={budget.budgetCategory} // Pass the budgetCategory
-                />
-            )}
-
             <DeleteConfirmationModal
                 isOpen={showDeleteItemModal && !!deletingItemId}
                 onClose={handleCancelItemDelete}
@@ -502,18 +570,6 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
                 title="Delete Expense Item"
                 message="Are you sure you want to delete this expense item? This action cannot be undone."
             />
-
-            {selectedImage && (
-                <ImageViewer
-                    imageData={selectedImage}
-                    fileType={selectedImageType}
-                    onClose={() => {
-                        setSelectedImage(null);
-                        setSelectedImageType(null);
-                    }}
-                />
-            )}
-
             <input
                 type="file"
                 ref={fileInputRef}
@@ -525,4 +581,4 @@ export const CustomBudgetDetails = ({ budget, onClose, onUpdate }) => {
     );
 };
 
-export default CustomBudgetDetails;
+export default PaycheckBudgetDetails;

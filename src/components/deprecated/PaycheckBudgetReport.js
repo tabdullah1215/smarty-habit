@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { Printer, X, Loader2, FileDown } from 'lucide-react';
 import _ from 'lodash';
-import { useToast } from '../contexts/ToastContext';
-import authService from '../services/authService';
-import handlePrint, { handlePdfDownload } from '../utils/enhancedReportGenerator';
-import {withMinimumDelay} from '../utils/withDelay';
+import { useToast } from '../../contexts/ToastContext';
+import authService from '../../services/authService';
+import handlePrint, { handlePdfDownload } from '../../utils/deprecated/enhancedReportGenerator';
+import {withMinimumDelay} from '../../utils/withDelay';
 import ReportImageGallery from './ReportImageGallery';
 import {
     ResponsiveContainer,
