@@ -3,16 +3,17 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PWAGateway from './components/PWAGateway';
 import Login from './components/Login';
 import AppRegistration from './components/AppRegistration';
-import { Home } from "./components/Home";  // Add this import
+import { Home } from "./components/Home";
 import authService from './services/authService';
 import { indexdbService } from './services/IndexDBService';
 import { PaycheckBudgets } from "./components/paycheck/PaycheckBudgets";
-import { Toaster } from 'react-hot-toast';  // Add this import
-import { ToastProvider } from './contexts/ToastContext';  // Add this import
+import { Toaster } from 'react-hot-toast';
+import { ToastProvider } from './contexts/ToastContext';
 import { QRCodeSVG } from 'qrcode.react';
 import {isMobileDevice, shouldBypassMobileCheck} from "./utils/helpers";
 import { BusinessProjects } from './components/business/BusinessProjects';
 import { CustomBudgets } from "./components/custom/CustomBudgets";
+import PremiumHabits from './components/PremiumHabits';
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -250,6 +251,36 @@ function App() {
                                 element={
                                     <ProtectedRoute>
                                         {isStandalone ? <CustomBudgets /> : <PWAGateway />}
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/premium-habits"
+                                element={
+                                    <ProtectedRoute>
+                                        {shouldAllowAccess ? (
+                                            isStandalone ? <PremiumHabits /> : <PWAGateway />
+                                        ) : <PWAGateway />}
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/wellness-habits"
+                                element={
+                                    <ProtectedRoute>
+                                        {shouldAllowAccess ? (
+                                            isStandalone ? <div>Wellness Habits Coming Soon</div> : <PWAGateway />
+                                        ) : <PWAGateway />}
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/productivity-habits"
+                                element={
+                                    <ProtectedRoute>
+                                        {shouldAllowAccess ? (
+                                            isStandalone ? <div>Productivity Habits Coming Soon</div> : <PWAGateway />
+                                        ) : <PWAGateway />}
                                     </ProtectedRoute>
                                 }
                             />

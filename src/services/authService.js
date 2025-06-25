@@ -1,7 +1,7 @@
 // src/services/authService.js
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
-import { API_ENDPOINT, APP_ID, DEFAULT_BUDGET_TYPE } from '../config';
+import { API_ENDPOINT, APP_ID, HABIT_TRACKER_APP_ID, DEFAULT_BUDGET_TYPE, DEFAULT_HABIT_TYPE } from '../config';
 
 const TOKEN_KEY = 'budget_auth_token';
 const API_KEY = process.env.REACT_APP_KEY_1;
@@ -43,7 +43,8 @@ const authService = {
 
         try {
             const decoded = jwtDecode(token);
-            return decoded.exp > Date.now() / 1000 && decoded.appId === APP_ID;
+            const currentAppId = this.getAppId();
+            return decoded.exp > Date.now() / 1000 && decoded.appId === currentAppId;
         } catch {
             return false;
         }
@@ -59,6 +60,15 @@ const authService = {
         }
     },
 
+    getAppId() {
+        try {
+            const userInfo = this.getUserInfo();
+            return userInfo?.appId || APP_ID; // Default to budget-tracker
+        } catch {
+            return APP_ID;
+        }
+    },
+
     initializeAuth() {
         const token = this.getToken();
         if (token) {
@@ -69,18 +79,22 @@ const authService = {
     getSubappId() {
         try {
             const userInfo = this.getUserInfo();
-            return userInfo?.subAppId || DEFAULT_BUDGET_TYPE;
+            const appId = this.getAppId();
+
+            // Return appropriate default based on app
+            const defaultSubapp = appId === HABIT_TRACKER_APP_ID ? DEFAULT_HABIT_TYPE : DEFAULT_BUDGET_TYPE;
+            return userInfo?.subAppId || defaultSubapp;
         } catch {
-            return DEFAULT_BUDGET_TYPE; // Use default from config
+            return DEFAULT_BUDGET_TYPE; // Fallback to budget default
         }
     },
 
-    async login(email, password) {
+    async login(email, password, appId = APP_ID) {
         try {
             const response = await axios.post(
                 `${API_ENDPOINT}/app-manager`,
                 {
-                    appId: APP_ID,
+                    appId,
                     email,
                     password
                 },
