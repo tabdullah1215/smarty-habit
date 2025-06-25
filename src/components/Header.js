@@ -34,7 +34,7 @@ export const Header = ({
 
     const currentBudgetType = budgetTypes[normalizedBudgetType] || budgetTypes.paycheck;
 
-    const createButtonText = currentBudgetType.buttonText || 'Create New Budget';
+    const createButtonText = currentBudgetType.buttonText || 'Create New Budget!';
 
     // IMPORTANT: Define fixed button classes instead of using dynamic classes
     // This ensures Tailwind won't purge these classes during build
