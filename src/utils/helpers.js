@@ -1,6 +1,6 @@
 // src/utils/helpers.js
 
-import { DEFAULT_BUDGET_TYPE, DEFAULT_HABIT_TYPE } from '../config';
+import { DEFAULT_BUDGET_TYPE } from '../config';
 export const capitalizeFirstLetter = (str) => str.charAt(0).toUpperCase() + str.slice(1);
 
 // Define budget types with their properties
@@ -55,50 +55,11 @@ export const budgetTypes = {
     }
 };
 
-// Define habit types with their properties
-export const habitTypes = {
-    premium: {
-        id: 'premium',
-        title: 'Premium Habits',
-        description: 'Track and build premium lifestyle habits',
-        route: '/premium-habits',
-        icon: 'Star',
-        color: 'text-yellow-600',
-        borderColor: 'border-yellow-600',
-        visible: true,
-        enabled: true,
-        buttonText: 'Create New Habit'
-    },
-    wellness: {
-        id: 'wellness',
-        title: 'Wellness Habits',
-        description: 'Track health and wellness habits',
-        route: '/wellness-habits',
-        icon: 'Heart',
-        color: 'text-red-600',
-        borderColor: 'border-red-600',
-        visible: true,
-        enabled: false,
-        buttonText: 'Create New Habit'
-    },
-    productivity: {
-        id: 'productivity',
-        title: 'Productivity Habits',
-        description: 'Build habits for better productivity',
-        route: '/productivity-habits',
-        icon: 'Zap',
-        color: 'text-purple-600',
-        borderColor: 'border-purple-600',
-        visible: true,
-        enabled: false,
-        buttonText: 'Create New Habit'
-    }
-};
 // Define a placeholder budget type for visual balance
-const placeholderType  = {
+const placeholderBudgetType = {
     id: 'placeholder',
-    title: 'More Features Coming Soon',
-    description: 'We\'re working on adding more features',
+    title: 'More Budget Features Coming Soon',
+    description: 'We\'re working on adding more budget management features',
     route: '#',
     icon: 'Calculator',
     color: 'text-gray-600',
@@ -133,25 +94,25 @@ export const getAvailableBudgetTypes = (subappId) => {
         case 'paycheck':
             return [
                 { ...budgetTypes.paycheck, visible: true, enabled: true },
-                placeholderType
+                placeholderBudgetType
             ];
 
         case 'savings':
             return [
                 { ...budgetTypes.savings, visible: true, enabled: true },
-                placeholderType
+                placeholderBudgetType
             ];
 
         case 'custom':
             return [
                 { ...budgetTypes.custom, visible: true, enabled: true },
-                placeholderType
+                placeholderBudgetType
             ];
 
         case 'business':
             return [
                 { ...budgetTypes.business, visible: true, enabled: true },
-                placeholderType
+                placeholderBudgetType
             ];
 
         case 'all':
@@ -165,56 +126,5 @@ export const getAvailableBudgetTypes = (subappId) => {
         default:
             // Unknown subappId - fallback to paycheck only
             return [{ ...budgetTypes[DEFAULT_BUDGET_TYPE], visible: true, enabled: true }];
-    }
-};
-
-// Function to get available habit types based on subappId
-export const getAvailableHabitTypes = (subappId) => {
-    if (!subappId) {
-        return [{ ...habitTypes[DEFAULT_HABIT_TYPE], visible: true, enabled: true }];
-    }
-
-    // Direct subappId to habitType mapping
-    switch (subappId) {
-        case 'premium':
-            return [
-                { ...habitTypes.premium, visible: true, enabled: true },
-                { ...placeholderType, title: 'More Habit Features Coming Soon' }
-            ];
-
-        case 'wellness':
-            return [
-                { ...habitTypes.wellness, visible: true, enabled: true },
-                { ...placeholderType, title: 'More Habit Features Coming Soon' }
-            ];
-
-        case 'productivity':
-            return [
-                { ...habitTypes.productivity, visible: true, enabled: true },
-                { ...placeholderType, title: 'More Habit Features Coming Soon' }
-            ];
-
-        case 'all':
-            // Enable all habit types when subappId is 'all'
-            return Object.values(habitTypes).map(type => ({
-                ...type,
-                visible: true,
-                enabled: true
-            }));
-
-        default:
-            // Unknown subappId - fallback to premium only
-            return [{ ...habitTypes[DEFAULT_HABIT_TYPE], visible: true, enabled: true }];
-    }
-};
-
-export const getAvailableTypes = (appId, subappId) => {
-    switch (appId) {
-        case 'budget-tracker':
-            return getAvailableBudgetTypes(subappId);
-        case 'habit-tracker':
-            return getAvailableHabitTypes(subappId);
-        default:
-            return getAvailableBudgetTypes(subappId);
     }
 };
