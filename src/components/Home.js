@@ -1,49 +1,46 @@
-// src/components/Home.js
+// src/components/Home.js - Habit Tracker version following budget blueprint exactly
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, Briefcase, Calculator, PiggyBank } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { Header } from './Header';
 import { withMinimumDelay } from '../utils/withDelay';
-import { getAvailableBudgetTypes } from '../utils/helpers';
+import { getAvailableHabitTypes } from '../utils/helpers';
 import authService from '../services/authService';
 
 const ICONS = {
-    Calculator: Calculator,
-    Wallet: Wallet,
-    Briefcase: Briefcase,
-    PiggyBank: PiggyBank
+    TrendingUp: TrendingUp
 };
 
-export const Home = () => {
+const Home = () => {
     const navigate = useNavigate();
     const [isNavigating, setIsNavigating] = useState(false);
-    const [availableBudgetTypes, setAvailableBudgetTypes] = useState([]);
+    const [availableHabitTypes, setAvailableHabitTypes] = useState([]);
 
     // Get the subappId from auth service
     const subappId = authService.getSubappId();
 
-    // Load available budget types based on the subappId
+    // Load available habit types based on the subappId
     useEffect(() => {
-        const types = getAvailableBudgetTypes(subappId);
+        const types = getAvailableHabitTypes(subappId);
 
         const filteredTypes = types.filter(type =>
             type.id !== 'placeholder' && type.enabled === true
         );
 
-        setAvailableBudgetTypes(filteredTypes);
+        setAvailableHabitTypes(filteredTypes);
     }, [subappId]);
 
-    const handleTileClick = async (budgetType) => {
-        if (!budgetType.enabled || isNavigating) return;
+    const handleTileClick = async (habitType) => {
+        if (!habitType.enabled || isNavigating) return;
 
         setIsNavigating(true);
-        const tileElement = document.getElementById(budgetType.id);
+        const tileElement = document.getElementById(habitType.id);
         const iconElement = tileElement?.querySelector('.tile-icon');
 
         if (iconElement) {
             iconElement.classList.add('animate-spin');
             await withMinimumDelay(async () => {
-                await navigate(budgetType.route);
+                await navigate(habitType.route);
             }, 1000);
         }
         setIsNavigating(false);
@@ -54,27 +51,27 @@ export const Home = () => {
             <Header />
             <div className="max-w-2xl mx-auto pt-44 md:pt-32 lg:pt-28 px-4 sm:px-6 lg:px-8">
                 <div className="space-y-4">
-                    {availableBudgetTypes.map((budgetType) => {
-                        const IconComponent = ICONS[budgetType.icon];
+                    {availableHabitTypes.map((habitType) => {
+                        const IconComponent = ICONS[habitType.icon];
 
                         return (
                             <div
-                                id={budgetType.id}
-                                key={budgetType.id}
-                                onClick={() => handleTileClick(budgetType)}
+                                id={habitType.id}
+                                key={habitType.id}
+                                onClick={() => handleTileClick(habitType)}
                                 className={`bg-white shadow-md rounded-lg p-6 border-2
                                     hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 cursor-pointer
-                                    ${budgetType.borderColor}`}
+                                    ${habitType.borderColor}`}
                             >
                                 <div className="flex justify-between items-center mb-2">
-                                    <h2 className={`text-xl font-semibold ${budgetType.color}`}>
-                                        {budgetType.title}
+                                    <h2 className={`text-xl font-semibold ${habitType.color}`}>
+                                        {habitType.title}
                                     </h2>
-                                    <div className={`${budgetType.color} tile-icon transition-transform duration-500`}>
+                                    <div className={`${habitType.color} tile-icon transition-transform duration-500`}>
                                         <IconComponent className="h-6 w-6" />
                                     </div>
                                 </div>
-                                <p className="text-gray-600">{budgetType.description}</p>
+                                <p className="text-gray-600">{habitType.description}</p>
                             </div>
                         );
                     })}

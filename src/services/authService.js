@@ -1,9 +1,9 @@
 // src/services/authService.js
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
-import { API_ENDPOINT, APP_ID, DEFAULT_BUDGET_TYPE } from '../config';
+import { API_ENDPOINT, APP_ID, DEFAULT_HABIT_TYPE } from '../config';
 
-const TOKEN_KEY = 'budget_auth_token';
+const TOKEN_KEY = 'habit_auth_token';
 const API_KEY = process.env.REACT_APP_KEY_1;
 
 // Add interceptor
@@ -69,9 +69,9 @@ const authService = {
     getSubappId() {
         try {
             const userInfo = this.getUserInfo();
-            return userInfo?.subAppId || DEFAULT_BUDGET_TYPE;
+            return userInfo?.subAppId || DEFAULT_HABIT_TYPE;
         } catch {
-            return DEFAULT_BUDGET_TYPE; // Use default from config
+            return DEFAULT_HABIT_TYPE; // Use default from config
         }
     },
 

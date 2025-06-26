@@ -126,7 +126,7 @@ const BackupButton = () => {
                 className="inline-flex items-center justify-center p-2
                     text-gray-600 hover:text-gray-900 transition-all duration-300
                     transform hover:scale-110 active:scale-95"
-                title="Backup all budget data"
+                title="Backup all habit data"
             >
                 {isBackingUp ? (
                     <Loader2 className="h-6 w-6 animate-spin" />

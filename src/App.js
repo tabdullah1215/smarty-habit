@@ -1,18 +1,16 @@
+// src/App.js
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PWAGateway from './components/PWAGateway';
 import Login from './components/Login';
 import AppRegistration from './components/AppRegistration';
-import { Home } from "./components/Home";  // Add this import
+import Home from "./components/Home";
 import authService from './services/authService';
 import { indexdbService } from './services/IndexDBService';
-import { PaycheckBudgets } from "./components/paycheck/PaycheckBudgets";
-import { Toaster } from 'react-hot-toast';  // Add this import
-import { ToastProvider } from './contexts/ToastContext';  // Add this import
+import { Toaster } from 'react-hot-toast';
+import { ToastProvider } from './contexts/ToastContext';
 import { QRCodeSVG } from 'qrcode.react';
 import {isMobileDevice, shouldBypassMobileCheck} from "./utils/helpers";
-import { BusinessProjects } from './components/business/BusinessProjects';
-import { CustomBudgets } from "./components/custom/CustomBudgets";
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -55,74 +53,21 @@ class ErrorBoundary extends React.Component {
 }
 
 const ProtectedRoute = ({ children }) => {
-    const [dbInitialized, setDbInitialized] = useState(false);
-    const [dbError, setDbError] = useState(null);
-
-    useEffect(() => {
-        const initDatabase = async () => {
-            try {
-                await indexdbService.initDB();
-                setDbInitialized(true);
-            } catch (error) {
-                console.error('Database initialization failed:', error);
-                setDbError(error);
-            }
-        };
-
-        initDatabase();
-    }, []);
-
-    if (dbError) {
-        return (
-            <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-                <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center">
-                    <h1 className="text-2xl font-bold text-gray-800 mb-4">
-                        Database Error
-                    </h1>
-                    <p className="text-gray-600 mb-4">
-                        Unable to access the database. This might be due to:
-                        <ul className="list-disc text-left pl-4 mt-2">
-                            <li>Private browsing mode</li>
-                            <li>Limited device storage</li>
-                            <li>Browser restrictions</li>
-                        </ul>
-                    </p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                    >
-                        Try Again
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    if (!dbInitialized) {
-        return (
-            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            </div>
-        );
-    }
-
     if (!authService.isAuthenticated()) {
         return <Navigate to="/login" replace />;
     }
-
     return children;
 };
 
 function App() {
     const [isStandalone, setIsStandalone] = useState(false);
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const currentPath = window.location.pathname;
-    const isRegistrationPath = currentPath.includes('/register/');
-    const shouldAllowAccess = isStandalone || shouldBypassMobileCheck();
+    const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
     const isAuthenticated = authService.isAuthenticated();
+    const isRegistrationPath = currentPath.includes('/register/');
 
     const getQRCodeUrl = () => {
-        if (process.env.REACT_APP_IS_LOCAL === 'true') {
+        if (process.env.REACT_APP_LOCAL_IP) {
             return `http://${process.env.REACT_APP_LOCAL_IP}:3000${window.location.pathname}`;
         }
         return window.location.href;
@@ -159,10 +104,10 @@ function App() {
                             className="h-24 mx-auto mb-6"
                         />
                         <h1 className="text-2xl font-bold text-gray-800 mb-4">
-                            Welcome to DIGITALPHORM BUDGET TRACKER APP
+                            Welcome to SMARTYAPPS HABIT TRACKER APP
                         </h1>
                         <p className="text-gray-600 mb-6">
-                            To install the DigitalPhorm Budget Tracker App
+                            To install the SmartyApps Habit Tracker App
                             please scan this QR code with your phone:
                         </p>
                         <div className="qr-code-container mx-auto w-48 h-48 mb-6">
@@ -187,6 +132,8 @@ function App() {
             return <PWAGateway />;
         }
     }
+
+    const shouldAllowAccess = isStandalone || shouldBypassMobileCheck() || isRegistrationPath;
 
     return (
         <ErrorBoundary>
@@ -220,10 +167,18 @@ function App() {
                                 }
                             />
                             <Route
-                                path="/paycheck-budgets"
+                                path="/habit-journey"
                                 element={
                                     <ProtectedRoute>
-                                        {isStandalone ? <PaycheckBudgets /> : <PWAGateway />}
+                                        {isStandalone ?
+                                            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                                                <div className="text-center">
+                                                    <h1 className="text-2xl font-bold text-gray-800 mb-4">Habit Journey</h1>
+                                                    <p className="text-gray-600">Coming soon - Habit tracking interface</p>
+                                                </div>
+                                            </div> :
+                                            <PWAGateway />
+                                        }
                                     </ProtectedRoute>
                                 }
                             />
@@ -235,22 +190,6 @@ function App() {
                                         <ProtectedRoute>
                                             <Navigate to="/dashboard" replace />
                                         </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/business-budgets"
-                                element={
-                                    <ProtectedRoute>
-                                        {isStandalone ? <BusinessProjects /> : <PWAGateway />}
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/custom-budgets"
-                                element={
-                                    <ProtectedRoute>
-                                        {isStandalone ? <CustomBudgets /> : <PWAGateway />}
-                                    </ProtectedRoute>
                                 }
                             />
                             <Route path="*" element={<Navigate to="/login" replace />} />

@@ -1,4 +1,4 @@
-// src/components/Header.js - Fixed version with safeguards for color classes
+// src/components/Header.js - Habit Tracker version following budget blueprint exactly
 
 import React, { useState, useEffect } from 'react';
 import { useLogin } from '../hooks/useLogin';
@@ -9,15 +9,15 @@ import { Loader2, ArrowLeft, LogOut, X, FileDown, FileSpreadsheet } from 'lucide
 import { useToast } from '../contexts/ToastContext';
 import BackupButton from './BackupButton';
 import { generatePdfReport } from '../utils/directPdfGenerator';
-import { budgetTypes } from '../utils/helpers';
+import { habitTypes } from '../utils/helpers';
 
 export const Header = ({
                            showCreateButton = false,
                            onCreateClick,
-                           isCreatingBudget = false,
+                           isCreatingHabit = false,
                            onDownloadCsv = () => {},
-                           selectedBudgets = [],
-                           budgetType = 'paycheck'
+                           selectedHabits = [],
+                           habitType = 'journey'
                        }) => {
     const { handleLogout } = useLogin();
     const [isLoggingOut, setIsLoggingOut] = React.useState(false);
@@ -29,22 +29,20 @@ export const Header = ({
     const isHomePage = location.pathname === '/' || location.pathname === '/dashboard';
     const { showToast } = useToast();
 
-    // Normalize budgetType to lowercase to avoid case sensitivity issues
-    const normalizedBudgetType = budgetType?.toLowerCase() || 'paycheck';
+    // Normalize habitType to lowercase to avoid case sensitivity issues
+    const normalizedHabitType = habitType?.toLowerCase() || 'journey';
 
-    const currentBudgetType = budgetTypes[normalizedBudgetType] || budgetTypes.paycheck;
+    const currentHabitType = habitTypes[normalizedHabitType] || habitTypes.journey;
 
-    const createButtonText = currentBudgetType.buttonText || 'Create New Budget!';
+    const createButtonText = currentHabitType.buttonText || 'Start New Habit';
 
     // IMPORTANT: Define fixed button classes instead of using dynamic classes
     // This ensures Tailwind won't purge these classes during build
     const getButtonClasses = () => {
         // Include all possible color variations directly in the code
         // This ensures Tailwind preserves all these classes during build
-        if (normalizedBudgetType === 'custom') {
-            return "bg-purple-600 hover:bg-purple-700 focus:ring-purple-500";
-        } else if (normalizedBudgetType === 'business') {
-            return "bg-emerald-800 hover:bg-emerald-900 focus:ring-emerald-500";
+        if (normalizedHabitType === 'journey') {
+            return "bg-green-600 hover:bg-green-700 focus:ring-green-500";
         } else {
             return "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500";
         }
@@ -77,9 +75,9 @@ export const Header = ({
 
     // Direct PDF generation without React components
     const handleDirectPdfGeneration = async () => {
-        // Validate we have budgets selected
-        if (selectedBudgets.length === 0) {
-            showToast('error', 'Please select at least one budget to generate a report');
+        // Validate we have habits selected
+        if (selectedHabits.length === 0) {
+            showToast('error', 'Please select at least one habit to generate a report');
             return;
         }
 
@@ -97,9 +95,9 @@ export const Header = ({
             // Update state to disable the button
             setIsGeneratingPdf(true);
 
-            // Generate the PDF directly with the selected budgets
+            // Generate the PDF directly with the selected habits
             await generatePdfReport(
-                selectedBudgets,
+                selectedHabits,
                 showToast,
                 (isLoading) => setIsGeneratingPdf(isLoading)
             );
@@ -114,14 +112,14 @@ export const Header = ({
         }
     };
 
-    const getBudgetType = () => {
+    const getHabitType = () => {
         const path = location.pathname;
 
-        // Check each budget type's route
-        for (const key in budgetTypes) {
-            const budgetType = budgetTypes[key];
-            if (path.includes(budgetType.route)) {
-                return budgetType.title;
+        // Check each habit type's route
+        for (const key in habitTypes) {
+            const habitType = habitTypes[key];
+            if (path.includes(habitType.route)) {
+                return habitType.title;
             }
         }
 
@@ -134,7 +132,7 @@ export const Header = ({
     };
 
     // For debugging - you can remove this in production
-    console.log("Current budget type:", normalizedBudgetType);
+    console.log("Current habit type:", normalizedHabitType);
     console.log("Button classes:", getButtonClasses());
 
     return (
@@ -157,7 +155,7 @@ export const Header = ({
                                 </div>
                             )}
                             <h1 className="text-2xl font-bold text-gray-900 text-center md:text-left flex-grow md:flex-grow-0">
-                                DigitalPhorm Budget Tracker
+                                SmartyApps Habit Tracker
                             </h1>
                         </div>
                         <span className="text-sm text-gray-600 text-center md:text-left">{userInfo?.sub}</span>
@@ -182,120 +180,51 @@ export const Header = ({
                         {showCreateButton && (
                             <button
                                 onClick={onCreateClick}
-                                disabled={isCreatingBudget}
+                                disabled={isCreatingHabit}
                                 className={`inline-flex items-center justify-center px-4 py-2
             border border-transparent text-sm font-medium rounded-md
-            shadow-sm text-white ${budgetType === 'custom' ? 'bg-purple-600 hover:bg-purple-700' :
-                                    budgetType === 'business' ? 'bg-emerald-800 hover:bg-emerald-900' :
-                                        'bg-blue-600 hover:bg-blue-700'}
+            shadow-sm text-white ${habitType === 'journey' ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}
             focus:outline-none focus:ring-2 focus:ring-offset-2
-            ${budgetType === 'custom' ? 'focus:ring-purple-500' :
-                                    budgetType === 'business' ? 'focus:ring-emerald-500' :
-                                        'focus:ring-blue-500'}
-            transition-all duration-200
-            disabled:opacity-50 disabled:cursor-not-allowed`}
+            ${habitType === 'journey' ? 'focus:ring-green-500' : 'focus:ring-blue-500'}
+            transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
-                                {isCreatingBudget ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin"/>
-                                        Creating...
-                                    </>
+                                {isCreatingHabit ? (
+                                    <Loader2 className="h-5 w-5 mr-2 animate-spin"/>
                                 ) : (
-                                    createButtonText
+                                    <FileDown className="h-5 w-5 mr-2"/>
                                 )}
+                                {createButtonText}
                             </button>
                         )}
-                    </div>
 
-                    {/* Budget Type and Buttons */}
-                    <div className="z-10 flex items-center justify-between md:gap-8">
-                        {/* W-10 div visible only in desktop */}
-                        <div className="hidden md:block w-10"/>
-
-                        {/* CSV button visible only in mobile, at the start */}
-                        {!isHomePage && (
-                            <div className="md:hidden">
+                        {/* Export buttons - following budget blueprint exactly */}
+                        {selectedHabits.length > 0 && (
+                            <>
                                 <button
-                                    onClick={async () => {
-                                        try {
-                                            const button = document.querySelector('.csv-button-mobile');
-                                            if (button) button.classList.add('animate-spin');
-                                            await withMinimumDelay(async () => {
-                                                await onDownloadCsv();
-                                            }, 800);
-                                        } finally {
-                                            const button = document.querySelector('.csv-button-mobile');
-                                            if (button) button.classList.remove('animate-spin');
-                                        }
-                                    }}
-                                    disabled={selectedBudgets.length === 0}
-                                    className="p-2 bg-green-600 text-white rounded
-                    hover:bg-green-700 transition-colors duration-200
-                    disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Download CSV Report"
+                                    onClick={onDownloadCsv}
+                                    className="inline-flex items-center justify-center px-4 py-2
+                                        bg-gray-600 text-white rounded hover:bg-gray-700
+                                        transition-all duration-300"
                                 >
-                                    <FileSpreadsheet
-                                        className="h-6 w-6 csv-button-mobile transition-transform duration-200"
-                                    />
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Budget Type - visible in both mobile and desktop */}
-                        {!isHomePage && (
-                            <div className="text-center md:flex-grow">
-                                <h2 className="text-lg text-gray-600">{getBudgetType()}</h2>
-                            </div>
-                        )}
-
-                        {/* Container for desktop CSV button and PDF button */}
-                        {!isHomePage && (
-                            <div className="flex items-center space-x-2">
-                                {/* CSV button visible only in desktop */}
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            const button = document.querySelector('.csv-button-desktop');
-                                            if (button) button.classList.add('animate-spin');
-                                            await withMinimumDelay(async () => {
-                                                await onDownloadCsv();
-                                            }, 800);
-                                        } finally {
-                                            const button = document.querySelector('.csv-button-desktop');
-                                            if (button) button.classList.remove('animate-spin');
-                                        }
-                                    }}
-                                    disabled={selectedBudgets.length === 0}
-                                    className="hidden md:inline-flex p-2 bg-green-600 text-white rounded
-                    hover:bg-green-700 transition-colors duration-200
-                    disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Download CSV Report"
-                                >
-                                    <FileSpreadsheet
-                                        className="h-6 w-6 csv-button-desktop transition-transform duration-200"
-                                    />
+                                    <FileSpreadsheet className="h-5 w-5 mr-2"/>
+                                    Export CSV
                                 </button>
 
-                                {/* PDF Report Button - visible in both mobile and desktop */}
                                 <button
                                     onClick={handleDirectPdfGeneration}
-                                    disabled={selectedBudgets.length === 0 || isGeneratingPdf}
-                                    className="p-2 bg-blue-600 text-white rounded
-                    hover:bg-blue-700 transition-colors duration-200
-                    disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Download PDF Report"
+                                    disabled={isGeneratingPdf}
+                                    className="report-button inline-flex items-center justify-center px-4 py-2
+                                        bg-red-600 text-white rounded hover:bg-red-700
+                                        disabled:bg-red-300 transition-all duration-300"
                                 >
                                     {isGeneratingPdf ? (
-                                        <Loader2
-                                            className="h-6 w-6 report-button animate-spin"
-                                        />
+                                        <Loader2 className="h-5 w-5 mr-2 animate-spin"/>
                                     ) : (
-                                        <FileDown
-                                            className="h-6 w-6 report-button transition-transform duration-200"
-                                        />
+                                        <FileDown className="h-5 w-5 mr-2"/>
                                     )}
+                                    {isGeneratingPdf ? 'Generating...' : 'Export PDF'}
                                 </button>
-                            </div>
+                            </>
                         )}
                     </div>
                 </div>
@@ -303,5 +232,3 @@ export const Header = ({
         </div>
     );
 };
-
-export default Header;

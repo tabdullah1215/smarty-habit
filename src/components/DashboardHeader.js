@@ -2,7 +2,7 @@
 import React from 'react';
 
 const DashboardHeader = ({
-                             subtitle = "DIGITALPHORM BUDGET TRACKER",
+                             subtitle = "SMARTYAPPS HABIT TRACKER",
                              title,
                              permanentMessage,
                              logoUrl = "/logo192.png",
@@ -25,8 +25,8 @@ const DashboardHeader = ({
                             src={logoUrl}
                             alt="SmartyApps.AI Logo"
                             className={`${isLoginPage
-                                ? 'h-12 md:h-10'     
-                                : 'h-12 md:h-16'     
+                                ? 'h-12 md:h-10'
+                                : 'h-12 md:h-16'
                             }`}
                         />
                     </div>
