@@ -5,6 +5,7 @@ import PWAGateway from './components/PWAGateway';
 import Login from './components/Login';
 import AppRegistration from './components/AppRegistration';
 import Home from "./components/Home";
+import { HabitJourney } from './components/journey/HabitJourney'; // Import the new component
 import authService from './services/authService';
 import { indexdbService } from './services/IndexDBService';
 import { Toaster } from 'react-hot-toast';
@@ -170,13 +171,8 @@ function App() {
                                 path="/habit-journey"
                                 element={
                                     <ProtectedRoute>
-                                        {isStandalone ?
-                                            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-                                                <div className="text-center">
-                                                    <h1 className="text-2xl font-bold text-gray-800 mb-4">Habit Journey</h1>
-                                                    <p className="text-gray-600">Coming soon - Habit tracking interface</p>
-                                                </div>
-                                            </div> :
+                                        {shouldAllowAccess ?
+                                            <HabitJourney /> :
                                             <PWAGateway />
                                         }
                                     </ProtectedRoute>
